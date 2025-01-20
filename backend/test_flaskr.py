@@ -35,7 +35,8 @@ class TriviaTestCase(unittest.TestCase):
 
     """
     TODO
-    Write at least one test for each test for successful operation and for expected errors.
+    Write at least one test for each test for successful operation and for 
+    expected errors.
     """
 
     def test_get_categories(self):
@@ -144,7 +145,6 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(res.data)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
-
 
     def test_quiz_not_found_category(self):
         quiz = {

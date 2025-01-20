@@ -9,6 +9,7 @@ from models import setup_db, db, Category, Question
 # constant for pagination
 NUMBER_PER_PAGE = 10
 
+
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
@@ -20,7 +21,8 @@ def create_app(test_config=None):
         setup_db(app, database_path=database_path)
 
     """
-    @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
+    @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after 
+    completing the TODOs
     """
     CORS(app)
 
@@ -33,8 +35,10 @@ def create_app(test_config=None):
 
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers',
+                             'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Methods',
+                             'GET, POST, DELETE, OPTIONS')
         return response
 
     """
@@ -49,14 +53,11 @@ def create_app(test_config=None):
             categories = Category.query.all()
 
             # formatted_categories = [cat.format() for cat in categories]
-            formatted_categories = {category.id: category.type for category in categories}
+            formatted_categories = {category.id: category.type for category in
+                                    categories}
 
             return jsonify(
-                {
-                    'success': True,
-                    'categories': formatted_categories,
-                }
-            )
+                {'success': True, 'categories': formatted_categories, })
 
         except Exception as e:
             print(e)
@@ -72,7 +73,8 @@ def create_app(test_config=None):
 
     TEST: At this point, when you start the application
     you should see questions and categories generated,
-    ten questions per page and pagination at the bottom of the screen for three pages.
+    ten questions per page and pagination at the bottom of the screen for 
+    three pages.
     Clicking on the page numbers should update the questions.
     """
 
@@ -82,35 +84,31 @@ def create_app(test_config=None):
         try:
             # retrieve questions and paginate
             pagination_obj = Question.query.paginate(per_page=NUMBER_PER_PAGE,
-                                                     page=request.args.get('page', 1, type=int))
+                                                     page=request.args.get(
+                                                         'page', 1, type=int))
             # format items in paginate object
-            current_questions = [question.format() for question in pagination_obj.items]
+            current_questions = [question.format() for question in
+                                 pagination_obj.items]
 
             # retrieve and format categories
             categories = Category.query.all()
             formatted_categories = [cat.format() for cat in categories]
 
-
             # current_category unknowable???
-            return jsonify(
-                {
-                    'success': True,
-                    'questions': current_questions,
-                    'categories': formatted_categories,
-                    'current_category': categories[0].format(),
-                    'total_questions': pagination_obj.total,
-                }
-            )
+            return jsonify({'success': True, 'questions': current_questions,
+                            'categories': formatted_categories,
+                            'current_category': categories[0].format(),
+                            'total_questions': pagination_obj.total, })
         except Exception as e:
             print(e)
             abort(404)
-
 
     """
     @TODO:
     Create an endpoint to DELETE question using a question ID.
 
-    TEST: When you click the trash icon next to a question, the question will be removed.
+    TEST: When you click the trash icon next to a question, the question 
+    will be removed.
     This removal will persist in the database and when you refresh the page.
     """
 
@@ -122,13 +120,10 @@ def create_app(test_config=None):
 
             question.delete()
 
-            return jsonify({
-                'success': True,
-            })
+            return jsonify({'success': True, })
         except Exception as e:
             print(e)
             abort(404)
-
 
     """
     @TODO:
@@ -138,13 +133,13 @@ def create_app(test_config=None):
     
 
     TEST: When you submit a question on the "Add" tab,
-    the form will clear and the question will appear at the end of the last page
+    the form will clear and the question will appear at the end of the last 
+    page
     of the questions list in the "List" tab.
     """
 
     @app.route('/questions', methods=['POST'])
     def post_question():
-
 
         try:
             body = request.get_json()
@@ -156,12 +151,8 @@ def create_app(test_config=None):
 
             # create object
             try:
-                question = Question(
-                question=question,
-                answer=answer,
-                difficulty=difficulty,
-                category=category
-            )
+                question = Question(question=question, answer=answer,
+                                    difficulty=difficulty, category=category)
                 if question.question == "" or question.answer == "":
                     raise ValueError("Empty string")
             except ValueError as err:
@@ -170,17 +161,15 @@ def create_app(test_config=None):
 
             question.insert()
 
-            return jsonify({
-                'success': True,
+            return jsonify({'success': True,
 
-            }), 201
+                            }), 201
         except ValueError as value_error:
             print(value_error)
             abort(422)
         except Exception as e:
             print(e)
             abort(422)
-
 
     """
     @TODO:
@@ -196,27 +185,24 @@ def create_app(test_config=None):
     @app.route('/questions/search', methods=['GET', 'POST'])
     def search_questions():
 
-
         try:
             body = request.get_json()
             search_term = body.get('searchTerm')
 
-            questions = Question.query.filter(Question.question.ilike('%' + search_term + '%')).all()
+            questions = Question.query.filter(
+                Question.question.ilike('%' + search_term + '%')).all()
 
             if not questions:
                 abort(404)
 
             formatted_questions = [question.format() for question in questions]
 
-            return jsonify({
-                'success': True,
-                'questions': formatted_questions,
-                'total_questions': len(formatted_questions)
-            })
+            return jsonify(
+                {'success': True, 'questions': formatted_questions,
+                 'total_questions': len(formatted_questions)})
         except Exception as e:
             print(e)
             abort(422)
-
 
     """
     @TODO:
@@ -229,24 +215,24 @@ def create_app(test_config=None):
 
     @app.route('/categories/<int:id>/questions')
     def questions_in_category(id):
-
         category = Category.query.get_or_404(id)
 
         try:
             # retrive all questions in a category, paginate and format
-            questions = (Question.query.filter_by(category=str(id))
-                         .paginate(per_page=NUMBER_PER_PAGE, page=request.args.get('page', 1, type=int)))
-            formatted_questions = [question.format() for question in questions.items]
+            questions = (Question.query.filter_by(category=str(id)).paginate(
+                per_page=NUMBER_PER_PAGE,
+                page=request.args.get('page', 1,
+                                      type=int)))
+            formatted_questions = [question.format() for question in
+                                   questions.items]
 
-            return jsonify({
-                'success': True,
-                'questions': formatted_questions,
-                'total_questions': questions.total,
-                'current_category': category.type
-            })
+            return jsonify({'success': True, 'questions': formatted_questions,
+                            'total_questions': questions.total,
+                            'current_category': category.type})
         except Exception as e:
             print(e)
             abort(404)
+
     """
     @TODO:
     Create a POST endpoint to get questions to play the quiz.
@@ -262,26 +248,27 @@ def create_app(test_config=None):
     @app.route('/quizzes', methods=['POST'])
     def quiz():
 
-
         try:
 
             body = request.get_json()
             quiz_category = body.get('quiz_category')
             previous_question = body.get('previous_questions')
 
-
-            # if no category is provided, retrieve all questions, else filter by category id.
+            # if no category is provided, retrieve all questions,
+            # else filter by category id.
             if quiz_category['id'] == 0:
-                query = (Question.query
-                         .filter(Question.id.not_in(previous_question)))
+                query = (Question.query.filter(
+                    Question.id.not_in(previous_question)))
             else:
-                query = (Question.query.filter_by(category=quiz_category['id'])
-                        .filter(Question.id.not_in(previous_question)))
+                query = (
+                Question.query.filter_by(category=quiz_category['id']).filter(
+                    Question.id.not_in(previous_question)))
 
-           # return filtered questions
+            # return filtered questions
             questions = query.all()
 
-            # if filtered_questions is empty this will return a null value for the front-end forceEnd state
+            # if filtered_questions is empty this will return a null value
+            # for the front-end forceEnd state
             next_question = None
 
             if len(questions) > 0:
@@ -289,26 +276,18 @@ def create_app(test_config=None):
                 index = random.randint(0, len(questions) - 1)
                 # retrieve the corresponding question
                 question = questions[index]
-                next_question = {
-                    'answer': question.answer,
-                    'category': question.category,
-                    'difficulty': question.difficulty,
-                    'id': question.id,
-                    'question': question.question
-                }
+                next_question = {'answer': question.answer,
+                                 'category': question.category,
+                                 'difficulty': question.difficulty,
+                                 'id': question.id,
+                                 'question': question.question}
 
-            return jsonify({
-                'success': True,
-                'question': next_question,
-                'previous_questions': previous_question
-            })
-
-
+            return jsonify({'success': True, 'question': next_question,
+                            'previous_questions': previous_question})
 
         except Exception as e:
             print(e)
             abort(404)
-
 
     """
     @TODO:
@@ -318,34 +297,22 @@ def create_app(test_config=None):
 
     @app.errorhandler(404)
     def page_not_found(error):
-        return jsonify({
-            'success': False,
-            'error': 404,
-            'message': 'Not found'
-        }), 404
+        return jsonify(
+            {'success': False, 'error': 404, 'message': 'Not found'}), 404
 
     @app.errorhandler(422)
     def unprocessable_resource(error):
-        return jsonify({
-            'success': False,
-            'error': 422,
-            'message': 'Unprocessable resource'
-        }), 422
+        return jsonify({'success': False, 'error': 422,
+                        'message': 'Unprocessable resource'}), 422
 
     @app.errorhandler(500)
     def internal_server_error(error):
-        return jsonify({
-            'success': False,
-            'error': 500,
-            'message': 'Internal server error'
-        }), 500
+        return jsonify({'success': False, 'error': 500,
+                        'message': 'Internal server error'}), 500
 
     @app.errorhandler(405)
     def method_not_allowed(error):
-        return jsonify({
-            'success': False,
-            'error': 405,
-            'message': 'Method not allowed'
-        }), 405
+        return jsonify({'success': False, 'error': 405,
+                        'message': 'Method not allowed'}), 405
 
     return app
