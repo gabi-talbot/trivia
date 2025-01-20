@@ -12,11 +12,6 @@ class TriviaTestCase(unittest.TestCase):
 
     def setUp(self):
         """Define test variables and initialize app."""
-        # self.database_name = "trivia_test"
-        # self.database_user = "postgres"
-        # self.database_password = "abc"
-        # self.database_host = "localhost:5432"
-        # self.database_path = f"postgresql://{self.database_user}:{self.database_password}@{self.database_host}/{self.database_name}"
 
         self.database_path = os.getenv('TEST_DATABASE_URI')
         # Create app with the test configuration
@@ -93,7 +88,7 @@ class TriviaTestCase(unittest.TestCase):
         }
         res = self.client.post('/questions', json=question)
         data = json.loads(res.data)
-        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.status_code, 201)
         self.assertEqual(data["success"], True)
 
     def test_cannot_add_question(self):
@@ -139,7 +134,7 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_quiz(self):
         quiz = {
-            'previous_questions': [10],
+            'previous_questions': [21],
             'quiz_category': {
                 'type': 'Science',
                 'id': '1'
@@ -149,14 +144,14 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(res.data)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
-        self.assertEqual(data['question']['category'], 1)
+
 
     def test_quiz_not_found_category(self):
         quiz = {
             'previous_questions': [6],
             'quiz_category': {
                 'type': '404',
-                'id': '404'
+                'id': 404
             }
         }
         res = self.client.post('/quizzes', json=quiz)

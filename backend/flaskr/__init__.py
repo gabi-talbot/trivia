@@ -6,19 +6,8 @@ from flask_cors import CORS
 
 from models import setup_db, db, Category, Question
 
+# constant for pagination
 NUMBER_PER_PAGE = 10
-
-
-# helper method to paginate responses
-def paginate_query(request, selection):
-    page = request.args.get('page', 1, type=int)
-    start = (page - 1) * NUMBER_PER_PAGE
-    end = start + NUMBER_PER_PAGE
-
-    items = [item.format() for item in selection]
-    current = items[start:end]
-
-    return current
 
 def create_app(test_config=None):
     # create and configure the app
@@ -68,7 +57,9 @@ def create_app(test_config=None):
                     'categories': formatted_categories,
                 }
             )
-        except:
+
+        except Exception as e:
+            print(e)
             abort(404)
 
     """
@@ -90,15 +81,13 @@ def create_app(test_config=None):
 
         try:
             # retrieve questions and paginate
-            # selection = Question.query.all()
-
             pagination_obj = Question.query.paginate(per_page=NUMBER_PER_PAGE,
                                                      page=request.args.get('page', 1, type=int))
-            # current_questions = paginate_query(request, selection)
+            # format items in paginate object
             current_questions = [question.format() for question in pagination_obj.items]
-            # retrieve categories
-            categories = Category.query.all()
 
+            # retrieve and format categories
+            categories = Category.query.all()
             formatted_categories = [cat.format() for cat in categories]
 
 
@@ -112,8 +101,10 @@ def create_app(test_config=None):
                     'total_questions': pagination_obj.total,
                 }
             )
-        except:
+        except Exception as e:
+            print(e)
             abort(404)
+
 
     """
     @TODO:
@@ -134,8 +125,10 @@ def create_app(test_config=None):
             return jsonify({
                 'success': True,
             })
-        except:
+        except Exception as e:
+            print(e)
             abort(404)
+
 
     """
     @TODO:
@@ -152,9 +145,9 @@ def create_app(test_config=None):
     @app.route('/questions', methods=['POST'])
     def post_question():
 
-        body = request.get_json()
 
         try:
+            body = request.get_json()
             # test body for inputs
             question = body.get('question')
             answer = body.get('answer')
@@ -162,21 +155,32 @@ def create_app(test_config=None):
             category = body.get('category')
 
             # create object
-            question = Question(
+            try:
+                question = Question(
                 question=question,
                 answer=answer,
                 difficulty=difficulty,
                 category=category
             )
+                if question.question == "" or question.answer == "":
+                    raise ValueError("Empty string")
+            except ValueError as err:
+                print(err)
+                abort(422)
 
             question.insert()
 
             return jsonify({
                 'success': True,
 
-            })
-        except:
+            }), 201
+        except ValueError as value_error:
+            print(value_error)
             abort(422)
+        except Exception as e:
+            print(e)
+            abort(422)
+
 
     """
     @TODO:
@@ -192,9 +196,9 @@ def create_app(test_config=None):
     @app.route('/questions/search', methods=['GET', 'POST'])
     def search_questions():
 
-        body = request.get_json()
 
         try:
+            body = request.get_json()
             search_term = body.get('searchTerm')
 
             questions = Question.query.filter(Question.question.ilike('%' + search_term + '%')).all()
@@ -209,8 +213,10 @@ def create_app(test_config=None):
                 'questions': formatted_questions,
                 'total_questions': len(formatted_questions)
             })
-        except:
+        except Exception as e:
+            print(e)
             abort(422)
+
 
     """
     @TODO:
@@ -226,17 +232,21 @@ def create_app(test_config=None):
 
         category = Category.query.get_or_404(id)
 
-        # retrive all questions in a category
-        questions = Question.query.filter_by(category=str(id)).all()
-        response = paginate_query(request, questions)
+        try:
+            # retrive all questions in a category, paginate and format
+            questions = (Question.query.filter_by(category=str(id))
+                         .paginate(per_page=NUMBER_PER_PAGE, page=request.args.get('page', 1, type=int)))
+            formatted_questions = [question.format() for question in questions.items]
 
-        return jsonify({
-            'success': True,
-            'questions': response,
-            'total_questions': len(questions),
-            'current_category': category.type
-        })
-
+            return jsonify({
+                'success': True,
+                'questions': formatted_questions,
+                'total_questions': questions.total,
+                'current_category': category.type
+            })
+        except Exception as e:
+            print(e)
+            abort(404)
     """
     @TODO:
     Create a POST endpoint to get questions to play the quiz.
@@ -252,36 +262,33 @@ def create_app(test_config=None):
     @app.route('/quizzes', methods=['POST'])
     def quiz():
 
-        body = request.get_json()
-        quiz_category = body.get('quiz_category')
-        previous_question = body.get('previous_questions')
-        print(previous_question)
 
         try:
 
-            # if no category is provided, retrieve all questions
+            body = request.get_json()
+            quiz_category = body.get('quiz_category')
+            previous_question = body.get('previous_questions')
+
+
+            # if no category is provided, retrieve all questions, else filter by category id.
             if quiz_category['id'] == 0:
-                query = Question.query.all()
+                query = (Question.query
+                         .filter(Question.id.not_in(previous_question)))
             else:
-                query = Question.query.filter_by(
-                    category=quiz_category['id']).all()
+                query = (Question.query.filter_by(category=quiz_category['id'])
+                        .filter(Question.id.not_in(previous_question)))
 
-            filtered_questions = []
-            print(f"query: {query}")
-            for question in query:
-                if question.id not in previous_question:
-                    filtered_questions.append(question)
+           # return filtered questions
+            questions = query.all()
 
-            print(f"Now in filtered: {filtered_questions}")
-
-            # if filtered_questions is empty return a null value for the front end forceEnd state
+            # if filtered_questions is empty this will return a null value for the front-end forceEnd state
             next_question = None
 
-            if filtered_questions:
+            if len(questions) > 0:
                 # select a random index between 0 and end of array
-                index = random.randint(0, len(filtered_questions) - 1)
+                index = random.randint(0, len(questions) - 1)
                 # retrieve the corresponding question
-                question = filtered_questions[index]
+                question = questions[index]
                 next_question = {
                     'answer': question.answer,
                     'category': question.category,
@@ -298,8 +305,10 @@ def create_app(test_config=None):
 
 
 
-        except:
+        except Exception as e:
+            print(e)
             abort(404)
+
 
     """
     @TODO:
